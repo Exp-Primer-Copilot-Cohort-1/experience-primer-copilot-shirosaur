@@ -1,71 +1,99 @@
-// create web server to handle request and send response
-// import http module
-const http = require('http');
+// Create web server 
+// application to handle HTTP requests
+// This is a "RESTful" API that uses HTTP methods (verbs) to 
+// indicate what action is being requested.
+// GET = read
+// POST = create
+// PUT = update
+// DELETE = delete
+// The API returns JSON formatted data
 
-// import url module
-const url = require('url');
+// Import modules
+var express = require('express');
+var bodyParser = require('body-parser');
+var fs = require('fs');
 
-// import querystring module
-const querystring = require('querystring');
+// Create express app
+var app = express();
 
-// create server
-http.createServer(function(req, res) {
-    // get the query string
-    const query = url.parse(req.url).query;
-    // parse the query string
-    const params = querystring.parse(query);
+// Configure app to use bodyParser to parse data from a POST
+// app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-    // set the response header
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
+// Set port
+var port = process.env.PORT || 8080; // set our port
 
-    if ('firstname' in params && 'lastname' in params) {
-        // response with firstname and lastname
-        res.write('Your name is ' + params['firstname'] + ' ' + params['lastname']);
-    } else {
-        // response without firstname and lastname
-        res.write('Your name is undefined');
-    }
-    res.end();
-}).listen(8081);
+// Create express router
+var router = express.Router();
 
-// print the message
-console.log('Server running at http://');
+// Log all requests to the console
+router.use(function(req, res, next) {
+    console.log(req.method, req.url);
+    next();
+});
 
-// Path: hello.js
-// create web server to handle request and send response
-// import http module
-const http = require('http');
+// Home page route
+router.get('/', function(req, res) {
+    res.json({ message: 'Welcome to the comments API!' });
+});
 
-// import url module
-const url = require('url');
+// Get all comments
+router.get('/comments', function(req, res) {
+    fs.readFile('comments.json', 'utf8', function(err, data) {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Error retrieving comments');
+        }
+        else {
+            res.send(data);
+        }
+    });
+});
 
-// create server
-http.createServer(function(req, res) {
-    // get the query string
-    const query = url.parse(req.url, true).query;
-    // get the name
-    const name = query.name;
+// Get a single comment
+router.get('/comments/:id', function(req, res) {
+    fs.readFile('comments.json', 'utf8', function(err, data) {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Error retrieving comments');
+        }
+        else {
+            var comments = JSON.parse(data);
+            var comment = comments[req.params.id];
+            if (!comment) {
+                res.status(404).send('Comment not found');
+            }
+            else {
+                res.send(JSON.stringify(comment));
+            }
+        }
+    });
+});
 
-    // set the response header
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    // response with name
-    res.write('Hello ' + name);
-    res.end();
-}).listen(8081);
-
-// print the message
-console.log('Server running at http://');
-
-// Path: index.html
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Node.js GET Request</title>
-    <meta charset="utf-8"></meta>
-</head>
-
-<body>
-    <form action="http://"></form>
-</body>
-</html>
+// Create a comment
+router.post('/comments', function(req, res) {
+    fs.readFile('comments.json', 'utf8', function(err, data) {
+        if (err) {
+            console.log(err);
+            res.status(500).send('Error retrieving comments');
+        }
+        else {
+            var comments = JSON.parse(data);
+            var comment = req.body;
+            var id = comments.length;
+            comment.id = id;
+            comments.push(comment);
+            
+            // Save the updated comments array to the file
+            fs.writeFile('comments.json', JSON.stringify(comments), 'utf8', function(err) {
+                if (err) {
+                    console.log(err);
+                    res.status(500).send('Error saving comment');
+                }
+                else {
+                    res.send('Comment saved successfully');
+                }
+            });
+        }
+    });
+});
